@@ -1,23 +1,39 @@
 
-library(biomod2)
-library(sp)
-library(raster)
+library("biomod2", quietly = TRUE)
+library("sp", quietly = TRUE)
+library("raster", quietly = TRUE)
+library("dplyr", quietly = TRUE)
+library("rgdal", quietly = TRUE)
 
-DataSpecies
 
-#DataSpecies_test <-read.csv("Sula_test.csv", h=T) #nombre de la megatabla segun sp y N
-myRespName <- 'Coihue'
 
 # Variables ambientales
 # Hacer stack de los raster de las variables ambientales segun spp y extent
-stfiles=list.files("~/Google Drive/Proyectos/Invasoras_Conabio/ISLAS/Presente", pattern = "*.asc$", full.name=T)
-myExpl=stack(stfiles)
-myExpl
+stfiles=list.files("F:/COBERTURAS/CHELSA", pattern = "*.tif$", full.name=T)
+bioclima=stack(stfiles)
+
+###
+# M
+shapePath <- 'C:/Proyectos/Carlos/CC_Chile'
+shapeLayer <- "ecoregionsOI2"
+M <- rgdal::readOGR(shapePath, shapeLayer)
+
+# Mask rasters with M
+VariablesCrop <- raster::crop(bioclima, M)
+myExpl <- raster::mask(VariablesCrop, M) #Species variables delimited by M
+myExpl <-stack(myExpl)
 names(myExpl)
 plot(myExpl)
 
+#DataSpecies_test <-read.csv("Sula_test.csv", h=T) #nombre de la megatabla segun sp y N
+presencias <- read.csv("Coihue_pres2_5.csv")
+ausencias <- read.csv("Coihue_aus2_5.csv")
+DataSpecies<-rbind(presencias,ausencias)
+colnames(DataSpecies)[4]<-"Coihue"
+
+myRespName <- 'Coihue'
 myResp <- as.numeric(DataSpecies[,myRespName])
-myRespCoord = DataSpecies[c('long','lat')]
+myRespCoord = DataSpecies[c('X','Y')]
 
 ## Inicio, ajuste de los datos
 myBiomodData <- BIOMOD_FormatingData(resp.var = myResp,
@@ -33,7 +49,7 @@ myBiomodOption <-BIOMOD_ModelingOptions()
 myBiomodModelOut <- BIOMOD_Modeling(
   myBiomodData,
   models = c('GLM', 'GBM', 'GAM', 'CTA', 'ANN', 'SRE', 'FDA', 'MARS',
-             'RF', 'MAXENT'),
+             'RF'),
   models.options = myBiomodOption, 
   NbRunEval=1,
   DataSplit=70,
@@ -60,11 +76,11 @@ myBiomodProj <- BIOMOD_Projection(
   output.format = '.grd')
 
 #currentPred
-currentPred <- stack("/proj_Coihue/proj_Coihue.grd")
-writeRaster(currentPred, filename="Coihue/.asc", overwrite=T, bylayer=TRUE, suffix='names')
+currentPred <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue.grd")
+writeRaster(currentPred, filename="Coihue/.tif", overwrite=T, bylayer=TRUE, suffix='names')
 plot(currentPred)
 
-currentPred_bin <- stack("/proj_Coihue/proj_Coihue_TSSbin.grd")
+currentPred_bin <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue_TSSbin.grd")
 plot(currentPred_bin)
 sumaPres<-sum(currentPred_bin)
 plot(sumaPres)
