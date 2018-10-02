@@ -14,7 +14,7 @@ bioclima=stack(stfiles)
 
 ###
 # M
-shapePath <- 'C:/Proyectos/Carlos/CC_Chile'
+shapePath <- 'C:/Proyectos/Carlos/CC_Chile/mask'
 shapeLayer <- "ecoregionsOI2"
 M <- rgdal::readOGR(shapePath, shapeLayer)
 
