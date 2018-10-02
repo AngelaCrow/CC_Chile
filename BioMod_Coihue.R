@@ -5,20 +5,18 @@ library("raster", quietly = TRUE)
 library("dplyr", quietly = TRUE)
 library("rgdal", quietly = TRUE)
 
-
-
 # Variables ambientales
 # Hacer stack de los raster de las variables ambientales segun spp y extent
 stfiles=list.files("F:\\COBERTURAS\\Worldclim\\WC_bios_asc", pattern = "*.asc$", full.name=T)
 bioclima=stack(stfiles)
 
 ###
-# M
+# M de la especie la defini utilizando las ecorregiones de Olson
 shapePath <- 'C:/Proyectos/Carlos/CC_Chile/mask'
 shapeLayer <- "ecoregionsOI2"
 M <- rgdal::readOGR(shapePath, shapeLayer)
 
-# Mask rasters with M
+# Cortar bioclimas con mascara M
 VariablesCrop <- raster::crop(bioclima, M)
 myExpl <- raster::mask(VariablesCrop, M) #Species variables delimited by M
 myExpl <-stack(myExpl)
@@ -27,22 +25,25 @@ myExpl<-myExpl[[c(6,8,15,16,17)]]
 plot(myExpl)
 
 #DataSpecies_test <-read.csv("Sula_test.csv", h=T) #nombre de la megatabla segun sp y N
+#Adelgace los puntos usando una malla de 0.041666
 presencias <- read.csv("Coihue_pres2_5.csv")
 ausencias <- read.csv("Coihue_aus2_5.csv")
 DataSpecies<-rbind(presencias,ausencias)
 colnames(DataSpecies)[4]<-"Coihue"
 
+## Inicio, ajuste de los datos
+
 myRespName <- 'Coihue'
 myResp <- as.numeric(DataSpecies[,myRespName])
 myRespCoord = DataSpecies[c('X','Y')]
 
-## Inicio, ajuste de los datos
 myBiomodData <- BIOMOD_FormatingData(resp.var = myResp,
                                      expl.var = myExpl,
                                      resp.xy = myRespCoord,
                                      resp.name = myRespName)
 myBiomodData
 plot(myBiomodData)
+
 ### Parametrizacion
 myBiomodOption <-BIOMOD_ModelingOptions() 
 
@@ -50,7 +51,7 @@ myBiomodOption <-BIOMOD_ModelingOptions()
 myBiomodModelOut <- BIOMOD_Modeling(
   myBiomodData,
   models = c('GLM', 'GBM', 'GAM', 'CTA', 'ANN', 'SRE', 'FDA', 'MARS',
-             'RF', 'MAXENT'),
+             'RF'),
   models.options = myBiomodOption, 
   NbRunEval=1,
   DataSplit=70,
@@ -76,10 +77,10 @@ myBiomodProj <- BIOMOD_Projection(
   clamping.mask = FALSE,
   output.format = '.grd')
 
-#currentPred
-currentPred <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue.grd")
-writeRaster(currentPred, filename="Coihue/.tif", overwrite=T, bylayer=TRUE, suffix='names')
-plot(currentPred)
+#Guardar raster por separado
+#currentPred <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue.grd")
+#writeRaster(currentPred, filename="Coihue/.tif", overwrite=T, bylayer=TRUE, suffix='names')
+#plot(currentPred)
 
 ### ensemble_modeling#####
 myBiomodEM <- BIOMOD_EnsembleModeling( 
@@ -114,5 +115,5 @@ plot(myBiomodEMcurrent)
 
 #myBiomodEFPred
 myBiomodEMcurrentPred <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue_ensemble.grd")
-writeRaster(myBiomodEMcurrentPred, filename="Coihue/.tif", overwrite=T, bylayer=TRUE, suffix='names')
+writeRaster(myBiomodEMcurrentPred, filename=".tif", overwrite=T, bylayer=TRUE, suffix='names')
 plot(currentPred)
