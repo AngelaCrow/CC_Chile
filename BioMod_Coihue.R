@@ -50,7 +50,7 @@ myBiomodOption <-BIOMOD_ModelingOptions()
 myBiomodModelOut <- BIOMOD_Modeling(
   myBiomodData,
   models = c('GLM', 'GBM', 'GAM', 'CTA', 'ANN', 'SRE', 'FDA', 'MARS',
-             'RF'),
+             'RF', 'MAXENT'),
   models.options = myBiomodOption, 
   NbRunEval=1,
   DataSplit=70,
@@ -85,7 +85,7 @@ plot(currentPred)
 myBiomodEM <- BIOMOD_EnsembleModeling( 
   modeling.output = myBiomodModelOut,
   chosen.models = 'all',
-  em.by='algo',
+  em.by='all',
   eval.metric = c('ROC'),
   eval.metric.quality.threshold = c(0.8),
   prob.mean = T,
@@ -104,10 +104,15 @@ myBiomodEM
 myBiomodEMEval<-get_evaluations(myBiomodEM)
 write.csv(myBiomodEMEval,"myBiomodEMEval.csv")
 
-myBiomodEF <- BIOMOD_EnsembleForecasting( 
+#projBiomodEnsemble
+myBiomodEMcurrent <- BIOMOD_EnsembleForecasting( 
   EM.output = myBiomodEM,
   projection.output = myBiomodProj)
 
-myBiomodEF
+myBiomodEMcurrent
+plot(myBiomodEMcurrent)
 
-plot(myBiomodEF)
+#myBiomodEFPred
+myBiomodEMcurrentPred <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue_ensemble.grd")
+writeRaster(myBiomodEMcurrentPred, filename="Coihue/.tif", overwrite=T, bylayer=TRUE, suffix='names')
+plot(currentPred)
