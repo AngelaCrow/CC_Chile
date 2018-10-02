@@ -9,7 +9,7 @@ library("rgdal", quietly = TRUE)
 
 # Variables ambientales
 # Hacer stack de los raster de las variables ambientales segun spp y extent
-stfiles=list.files("F:/COBERTURAS/CHELSA", pattern = "*.tif$", full.name=T)
+stfiles=list.files("F:\\COBERTURAS\\Worldclim\\WC_bios_asc", pattern = "*.asc$", full.name=T)
 bioclima=stack(stfiles)
 
 ###
@@ -23,6 +23,7 @@ VariablesCrop <- raster::crop(bioclima, M)
 myExpl <- raster::mask(VariablesCrop, M) #Species variables delimited by M
 myExpl <-stack(myExpl)
 names(myExpl)
+myExpl<-myExpl[[c(6,8,15,16,17)]]
 plot(myExpl)
 
 #DataSpecies_test <-read.csv("Sula_test.csv", h=T) #nombre de la megatabla segun sp y N
@@ -80,15 +81,33 @@ currentPred <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue.grd")
 writeRaster(currentPred, filename="Coihue/.tif", overwrite=T, bylayer=TRUE, suffix='names')
 plot(currentPred)
 
-currentPred_bin <- stack("Coihue/proj_Coihue/proj_Coihue_Coihue_TSSbin.grd")
-plot(currentPred_bin)
-sumaPres<-sum(currentPred_bin)
-plot(sumaPres)
-r <-function(x){
-  x[x<=1]<-0; x[x>=2]<-1 
-  return(x)}
-Pres_bin<-calc(sumaPres, fun= r )
-plot(Pres_bin)
-writeRaster(Pres_bin, filename="Coihue/presente.tif", overwrite=T, suffix='names')
-writeRaster(currentPred_bin, filename="Coihue/TSSbin.tif", overwrite=T, bylayer=TRUE, suffix='names')
-plot(currentPred_bin)
+### ensemble_modeling#####
+myBiomodEM <- BIOMOD_EnsembleModeling( 
+  modeling.output = myBiomodModelOut,
+  chosen.models = 'all',
+  em.by='algo',
+  eval.metric = c('ROC'),
+  eval.metric.quality.threshold = c(0.8),
+  prob.mean = T,
+  prob.cv = T,
+  prob.ci = T,
+  prob.ci.alpha = 0.05,
+  prob.median = T,
+  committee.averaging = T,
+  prob.mean.weight = T,
+  prob.mean.weight.decay = 'proportional' )
+
+# print summary
+myBiomodEM
+
+# get evaluation scores
+myBiomodEMEval<-get_evaluations(myBiomodEM)
+write.csv(myBiomodEMEval,"myBiomodEMEval.csv")
+
+myBiomodEF <- BIOMOD_EnsembleForecasting( 
+  EM.output = myBiomodEM,
+  projection.output = myBiomodProj)
+
+myBiomodEF
+
+plot(myBiomodEF)
